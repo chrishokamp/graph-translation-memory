@@ -14,7 +14,48 @@ function TMInterface(dbName, collectionName) {
   }
 }
 
-//TMInterface.prototype.findTranslations
+TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
+  var self = this;
+  var deferred = Q.defer();
+
+  MongoClient.connect(self.dbUrl(), function(err, db) {
+    db.collection(self.collectionName, function(err, collection) {
+      if (err) throw err;
+      db.collection(self.collectionName, function(err, collection) {
+        // TODO: this index creation was failing in the tests -- why??
+          collection.find({ lang: qLang, $text: { $search: qSegment}},
+            { score: { $meta: "textScore" },
+              edges: 1
+            },
+            function(err, cursor) {
+            if (err) deferred.reject(err);
+            cursor.toArray(
+              function(err, items) {
+                if (err) deferred.reject(err);
+                // TODO: extend this to list of lists
+                if (items.length >0 ){
+                  console.log('ITEMS:');
+                  console.log(items);
+                  var item = items[0]
+                  // get the object ids, then return those
+                  collection.find({_id: {$in: item.edges}}, function(err,cursor) {
+                    cursor.toArray(function(err,matches) {
+                      if (err) deferred.reject(err);
+                      deferred.resolve(matches);
+                      db.close();
+                    })
+                  });
+                }
+              }
+            );
+        });
+      });
+    });
+  });
+  return deferred.promise;
+}
+// given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
+// return all edges to this translation node
 
 TMInterface.prototype.hasEntry = function(tmObj) {
   var self = this;
@@ -25,7 +66,7 @@ TMInterface.prototype.hasEntry = function(tmObj) {
       collection.findOne( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, item) {
         if (err) deferred.reject(err);
           if (item) {
-            deferred.resolve(true);
+            deferred.resolve(item);
           } else {
             deferred.resolve(false);
           }
@@ -39,22 +80,36 @@ TMInterface.prototype.hasEntry = function(tmObj) {
 TMInterface.prototype.addEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
+  if (!tmObj.lang || !tmObj.segment) {
+    deferred.reject(new Error('the tmObj does not have the right fields'));
+  }
 
   MongoClient.connect(this.dbUrl(), function(err, db) {
     db.collection(self.collectionName, function(err, collection) {
+      if (err) throw  err;
+      //collection.insert(tmObj, function(err, newEntry) {
+      self.hasEntry(tmObj)
+        .then(
+        function(item) {
+          if (item) {
+            deferred.resolve(item)
+          } else {
+            collection.insert(tmObj, function (err, newEntry) {
+              if (err) {
+                deferred.reject(err);
+                db.close();
+              } else {
+                // return res[0] because mongo returns a list, but this method is (semantically) only for one item
+                deferred.resolve(newEntry[0]);
+                db.close();
+              }
 
-      collection.insert(tmObj, function(err, newEntry) {
-        if (err) {
-          deferred.reject(err);
-          db.close();
-        } else {
-          // return res[0] because mongo returns a list, but this method is (semantically) only for one item
-          deferred.resolve(newEntry[0]);
-          db.close();
-        }
-      });
+            });
+          }
+        });
     });
   });
+
   return deferred.promise;
 }
 
@@ -64,7 +119,7 @@ TMInterface.prototype.addTranslations = function(objectId, translations) {
   var idObj = new ObjectID(objectId);
   MongoClient.connect(this.dbUrl(), function(err, db) {
     db.collection(self.collectionName, function(err, collection) {
-      collection.update({_id: idObj}, {$addToSet: { links: {$each: translations }}}, function(err) {
+      collection.update({_id: idObj}, {$addToSet: { edges: {$each: translations }}}, function(err) {
 
         if (err) {
           console.error('Error updating translation');
@@ -106,7 +161,7 @@ TMInterface.prototype.addEntries = function (tmObjList) {
     var updateProms = ids.map(
 
       function(nodeId, idx, idList) {
-        // copy the list of ids, splice out the current index, and add the others as links to the current obj
+        // copy the list of ids, splice out the current index, and add the others as edges to the current obj
         var others = idList.slice()
         others.splice(idx, 1);
         var updateProm = self.addTranslations(nodeId, others);
