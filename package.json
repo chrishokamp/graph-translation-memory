@@ -1,0 +1,23 @@
+{
+  "name": "graph-translation-memory",
+  "version": "0.0.0",
+  "description": "a graph-based translation memory with node and mongo",
+  "main": "web.js",
+  "scripts": {
+    "test": "jasmine-node ."
+  },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:chrishokamp/graph-translation-memory.git"
+  },
+  "author": "chrishokamp",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/chrishokamp/graph-translation-memory/issues"
+  },
+  "homepage": "https://github.com/chrishokamp/graph-translation-memory",
+  "dependencies": {
+    "q": "^1.0.1",
+    "mongodb": "^1.4.19"
+  }
+}

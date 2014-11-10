@@ -1,17 +1,11 @@
 var Q = require('q');
 //var config = require('./config');
 
-var mongo = require('mongodb'),
-  MongoClient = require('mongodb').MongoClient,
-  ObjectID = require('mongodb').ObjectID;
+var MongoClient = require('mongodb').MongoClient,
+    ObjectID = require('mongodb').ObjectID;
 
 // Constructor
 function TMInterface(dbName, collectionName) {
-  // always initialize all instance properties
-  // TODO: this index must be ensured beforehand
-  //collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
-  //  console.log('test callback');
-  //});
   this.dbName = dbName;
   this.collectionName = collectionName;
   this.url = 'mongodb://127.0.0.1:27017/';
@@ -20,28 +14,28 @@ function TMInterface(dbName, collectionName) {
   }
 }
 
-// TODO: implement
 //TMInterface.prototype.findTranslations
 
 TMInterface.prototype.hasEntry = function(tmObj) {
+  var self = this;
   var deferred = Q.defer();
+  MongoClient.connect(this.dbUrl(), function(err, db) {
+    db.collection(self.collectionName, function(err, collection) {
   // using quotes looks only for an exact phrasal match
-  this.collection.find( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, res) {
-    if (err) deferred.reject(err);
-    res.toArray(function(err, items) {
-      if (err) deferred.reject(err);
-
-      if (items.length) {
-        deferred.resolve(true);
-      } else {
-        deferred.resolve(false);
-      }
+      collection.findOne( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, item) {
+        if (err) deferred.reject(err);
+          if (item) {
+            deferred.resolve(true);
+          } else {
+            deferred.resolve(false);
+          }
+      });
     });
   });
   return deferred.promise;
 }
 
-// only called if entry doesn't exist
+// should only be called if entry doesn't exist
 TMInterface.prototype.addEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
