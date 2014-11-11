@@ -15,7 +15,6 @@ var mongo = require('mongodb'),
 
 //collection = db.collection('nodes');
 // remember that more meta data can be added to any field if/when it is needed
-
 var tmInterface;
 
 //from: the TAUS documentation: https://www.tausdata.org/apidoc#langs

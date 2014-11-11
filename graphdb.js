@@ -20,7 +20,7 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
 
   MongoClient.connect(self.dbUrl(), function(err, db) {
     db.collection(self.collectionName, function(err, collection) {
-      if (err) throw err;
+      if (err) deferred.reject(err);
       db.collection(self.collectionName, function(err, collection) {
         // TODO: this index creation was failing in the tests -- why??
           collection.find({ lang: qLang, $text: { $search: qSegment}},
@@ -80,20 +80,25 @@ TMInterface.prototype.hasEntry = function(tmObj) {
 TMInterface.prototype.addEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
+  //console.log('TM obj:');
+  //console.log(tmObj);
   if (!tmObj.lang || !tmObj.segment) {
-    deferred.reject(new Error('the tmObj does not have the right fields'));
+    deferred.reject(new Error('the tmObj does not have the right fields -- lang: ' + tmObj.lang + ' segment: ' + tmObj.segment));
   }
 
   MongoClient.connect(this.dbUrl(), function(err, db) {
+    if (err) deferred.reject(err);
     db.collection(self.collectionName, function(err, collection) {
-      if (err) throw  err;
-      //collection.insert(tmObj, function(err, newEntry) {
+      if (err) deferred.reject(err);
       self.hasEntry(tmObj)
         .then(
         function(item) {
           if (item) {
-            deferred.resolve(item)
+            deferred.resolve(item);
+            db.close();
           } else {
+            console.log('INSERTING:');
+            console.log(tmObj);
             collection.insert(tmObj, function (err, newEntry) {
               if (err) {
                 deferred.reject(err);
@@ -106,7 +111,11 @@ TMInterface.prototype.addEntry = function(tmObj) {
 
             });
           }
-        });
+        }).fail(
+        function(err) {
+          deferred.reject(err)
+        }
+      );
     });
   });
 

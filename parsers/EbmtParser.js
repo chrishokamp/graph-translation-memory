@@ -1,4 +1,3 @@
-// for now, pass in the file names and lang names
 var fs = require('fs')
 var assert = require('assert')
 
@@ -13,9 +12,9 @@ var createTMObj = function(str, lang) {
 }
 
 module.exports.parseFiles = function(tmFile1, tmFile2) {
-  var lines1 = fs.readFileSync(tmFile1.filename, {encoding: 'utf8'}).split('\n');
-  var lines2 = fs.readFileSync(tmFile2.filename, {encoding: 'utf8'}).split('\n');
-  assert.equal(lines1.length, lines2.length);
+  var lines1 = fs.readFileSync(tmFile1.filename, {encoding: 'utf8'}).trim().split('\n');
+  var lines2 = fs.readFileSync(tmFile2.filename, {encoding: 'utf8'}).trim().split('\n');
+  assert.equal(lines1.length, lines2.length, 'Error: the two files must have the same number of lines');
 
   var segs1 = lines1.map(function(seg) {
     return createTMObj(seg, tmFile1.lang)
