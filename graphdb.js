@@ -1,57 +1,38 @@
 var Q = require('q');
-//var config = require('./config');
 
-var MongoClient = require('mongodb').MongoClient,
-    ObjectID = require('mongodb').ObjectID;
+var ObjectID = require('mongodb').ObjectID;
 
-// Constructor
-function TMInterface(dbName, collectionName) {
-  this.dbName = dbName;
-  this.collectionName = collectionName;
-  this.url = 'mongodb://127.0.0.1:27017/';
-  this.dbUrl = function() {
-    return this.url +  this.dbName;
-  }
+function TMInterface(collection) {
+  this.collection= collection;
 }
 
 TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
   var self = this;
   var deferred = Q.defer();
 
-  MongoClient.connect(self.dbUrl(), function(err, db) {
-    db.collection(self.collectionName, function(err, collection) {
-      if (err) deferred.reject(err);
-      db.collection(self.collectionName, function(err, collection) {
-        // TODO: this index creation was failing in the tests -- why??
-          collection.find({ lang: qLang, $text: { $search: qSegment}},
-            { score: { $meta: "textScore" },
-              edges: 1
-            },
-            function(err, cursor) {
-            if (err) deferred.reject(err);
-            cursor.toArray(
-              function(err, items) {
-                if (err) deferred.reject(err);
-                // TODO: extend this to list of lists
-                if (items.length >0 ){
-                  console.log('ITEMS:');
-                  console.log(items);
-                  var item = items[0]
-                  // get the object ids, then return those
-                  collection.find({_id: {$in: item.edges}}, function(err,cursor) {
-                    cursor.toArray(function(err,matches) {
-                      if (err) deferred.reject(err);
-                      deferred.resolve(matches);
-                      db.close();
-                    })
-                  });
-                }
+      self.collection.find({ lang: qLang, $text: { $search: qSegment}},
+        { score: { $meta: "textScore" },
+          edges: 1
+        },
+        function(err, cursor) {
+          if (err) deferred.reject(err);
+          cursor.toArray(
+            function(err, items) {
+              if (err) deferred.reject(err);
+              // TODO: extend this to list of lists
+              if (items.length >0 ){
+                var item = items[0]
+                // get the object ids, then return those
+                self.collection.find({_id: {$in: item.edges}}, function(err,cursor) {
+                  cursor.toArray(function(err,matches) {
+                    if (err) deferred.reject(err);
+                    deferred.resolve(matches);
+                  })
+                });
               }
-            );
+            }
+          );
         });
-      });
-    });
-  });
   return deferred.promise;
 }
 // given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
@@ -60,96 +41,73 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
 TMInterface.prototype.hasEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
-  MongoClient.connect(this.dbUrl(), function(err, db) {
-    db.collection(self.collectionName, function(err, collection) {
-  // using quotes looks only for an exact phrasal match
-      collection.findOne( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, item) {
-        if (err) deferred.reject(err);
-          if (item) {
-            deferred.resolve(item);
-          } else {
-            deferred.resolve(false);
-          }
-      });
+  //MongoClient.connect(this.dbUrl(), function(err, db) {
+    // using quotes looks only for an exact phrasal match
+    self.collection.findOne( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, item) {
+      if (err) deferred.reject(err);
+      if (item) {
+        deferred.resolve(item);
+      } else {
+        deferred.resolve(false);
+      }
     });
-  });
   return deferred.promise;
 }
 
 // should only be called if entry doesn't exist
-TMInterface.prototype.addEntry = function(tmObj) {
-  var self = this;
-  var deferred = Q.defer();
-  //console.log('TM obj:');
-  //console.log(tmObj);
-  if (!tmObj.lang || !tmObj.segment) {
-    deferred.reject(new Error('the tmObj does not have the right fields -- lang: ' + tmObj.lang + ' segment: ' + tmObj.segment));
-  }
-
-  MongoClient.connect(this.dbUrl(), function(err, db) {
-    if (err) deferred.reject(err);
-    db.collection(self.collectionName, function(err, collection) {
-      if (err) deferred.reject(err);
-      self.hasEntry(tmObj)
-        .then(
-        function(item) {
-          if (item) {
-            deferred.resolve(item);
-            db.close();
-          } else {
-            console.log('INSERTING:');
-            console.log(tmObj);
-            collection.insert(tmObj, function (err, newEntry) {
-              if (err) {
-                deferred.reject(err);
-                db.close();
-              } else {
-                // return res[0] because mongo returns a list, but this method is (semantically) only for one item
-                deferred.resolve(newEntry[0]);
-                db.close();
-              }
-
-            });
-          }
-        }).fail(
-        function(err) {
-          deferred.reject(err)
-        }
-      );
-    });
-  });
-
-  return deferred.promise;
-}
 
 TMInterface.prototype.addTranslations = function(objectId, translations) {
   var deferred = Q.defer();
   var self = this;
   var idObj = new ObjectID(objectId);
-  MongoClient.connect(this.dbUrl(), function(err, db) {
-    db.collection(self.collectionName, function(err, collection) {
-      collection.update({_id: idObj}, {$addToSet: { edges: {$each: translations }}}, function(err) {
+  self.collection.update({_id: idObj}, {$addToSet: { edges: {$each: translations }}}, function(err) {
 
+    if (err) {
+      console.error('Error updating translation');
+      console.error(err);
+      deferred.reject(err);
+    } else {
+      self.collection.findOne({_id: idObj}, function (err, obj) {
         if (err) {
           console.error('Error updating translation');
           console.error(err);
           deferred.reject(err);
         } else {
-          collection.findOne({_id: idObj}, function (err, obj) {
-            if (err) {
-              console.error('Error updating translation');
-              console.error(err);
-              deferred.reject(err);
-              db.close();
-            } else {
-              deferred.resolve(obj);
-              db.close();
-            }
-          });
+          deferred.resolve(obj);
         }
       });
-    });
+    }
   });
+  return deferred.promise;
+}
+
+TMInterface.prototype.addEntry = function(tmObj) {
+  var self = this;
+  var deferred = Q.defer();
+  if (!tmObj.lang || !tmObj.segment) {
+    deferred.reject(new Error('the tmObj does not have the right fields -- lang: ' + tmObj.lang + ' segment: ' + tmObj.segment));
+  }
+
+  self.hasEntry(tmObj)
+    .then(
+    function(item) {
+      if (item) {
+        deferred.resolve(item);
+      } else {
+        self.collection.insert(tmObj, function (err, newEntry) {
+          if (err) {
+            deferred.reject(err);
+          } else {
+            // return res[0] because mongo returns a list, but this method is (semantically) only for one item
+            deferred.resolve(newEntry[0]);
+          }
+        });
+      }
+    }).fail(
+    function(err) {
+      deferred.reject(err)
+    }
+  );
   return deferred.promise;
 }
 
@@ -185,7 +143,6 @@ TMInterface.prototype.addEntries = function (tmObjList) {
       }
     );
   });
-
   return deferred.promise;
 }
 

@@ -12,6 +12,13 @@ var tmFile1;
 var tmFile2;
 var tmInterface;
 
+var collection, db;
+var url = 'mongodb://127.0.0.1:27017/';
+var dbName = 'testFixtureTMdb';
+var dbUri = url + dbName;
+
+var collectionName = 'nodes';
+
 describe('graphtm integration tests', function () {
 
   beforeEach(
@@ -26,16 +33,16 @@ describe('graphtm integration tests', function () {
 
       var dbName = 'testFixtureTMdb';
       var collectionName = 'nodes';
-      tmInterface = new graphtm(dbName, collectionName);
-      console.log('dbUrl is: ' + tmInterface.dbUrl());
       // create index on the collection
-      MongoClient.connect(tmInterface.dbUrl(), function(err, db) {
-        db.collection(tmInterface.collectionName, function(err, collection) {
+      MongoClient.connect(dbUri, function(err, db) {
+        if (err) throw err;
+        db.collection(collectionName, function(err, _collection_) {
+          collection = _collection_;
+          tmInterface = new graphtm(collection);
           collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
             //collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
-            //  done();
-            //});
               done();
+            //});
           });
         });
       });
@@ -44,14 +51,8 @@ describe('graphtm integration tests', function () {
 
 // afterEach drop test collection
   afterEach(function(done) {
-    MongoClient.connect(tmInterface.dbUrl(), function(err, db) {
-      db.collection(tmInterface.collectionName, function(err, collection) {
-        console.log('finished dropping collection');
-        collection.drop(function() {
-          done();
-        });
-      });
-    });
+    collection.drop();
+    done();
     //closing the db causes an error
     //db.close();
   });
@@ -61,10 +62,7 @@ describe('parse files and insert', function () {
 
   it('should be able to load files, parse them, then insert into the graph-tm', function(done) {
     var segs = EbmtParser.parseFiles(tmFile1, tmFile2);
-    console.log("segs:");
-    console.log(segs.slice(0,10));
-
-    // Working -- this fails if there are too many concurrent connections
+    // slice to make the tests run faster
     var testSegs = segs.slice(0,100);
     // Careful - note that we need to pass in 'tmInterface' as the 'this arg' to map
     var allPromises = Q.all(testSegs.map(tmInterface.addEntries, tmInterface));
@@ -88,6 +86,8 @@ describe('parse files and insert', function () {
       }
     )
   });
+
+  // assert that duplicates cannot be supported
 
 });
 

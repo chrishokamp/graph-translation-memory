@@ -16,6 +16,12 @@ var mongo = require('mongodb'),
 //collection = db.collection('nodes');
 // remember that more meta data can be added to any field if/when it is needed
 var tmInterface;
+var collection, db;
+var url = 'mongodb://127.0.0.1:27017/';
+var dbName = 'testFixtureTMdb';
+var dbUri = url + dbName;
+
+var collectionName = 'nodes';
 
 //from: the TAUS documentation: https://www.tausdata.org/apidoc#langs
 //Langs
@@ -25,16 +31,14 @@ var tmInterface;
 //Languages are represented as ISO 639-1 two letter language codes. Regions are represented by ISO 3166-1 alpha-2 two letter country codes (or in a few cases, by non-standard codes such as XL for Latin America). Langs are represented as a language, followed by a dash ("-"), followed by a region. Langs, languages, and regions are case-insensitive.
 describe('Graph DB tests', function () {
 
-
 // beforeEach create tmInterface
   beforeEach(function(done) {
-    var dbName = 'testFixtureTMdb';
-    var collectionName = 'nodes';
-    tmInterface = new graphtm(dbName, collectionName);
-    console.log('dbUrl is: ' + tmInterface.dbUrl());
     // create index on the collection
-    MongoClient.connect(tmInterface.dbUrl(), function(err, db) {
-      db.collection(tmInterface.collectionName, function(err, collection) {
+    MongoClient.connect(dbUri, function(err, db) {
+      if (err) throw err;
+      db.collection(collectionName, function(err, _collection_) {
+        collection = _collection_;
+        tmInterface = new graphtm(collection);
         collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
           collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
             done();
@@ -47,14 +51,8 @@ describe('Graph DB tests', function () {
 
 // afterEach drop test collection
   afterEach(function(done) {
-    MongoClient.connect(tmInterface.dbUrl(), function(err, db) {
-      db.collection(tmInterface.collectionName, function(err, collection) {
-        console.log('finished dropping collection');
-        collection.drop(function() {
-          done();
-        });
-      });
-    });
+   collection.drop();
+    done();
     //closing the db causes an error
     //db.close();
   });
