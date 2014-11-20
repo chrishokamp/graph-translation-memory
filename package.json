@@ -18,7 +18,13 @@
   "homepage": "https://github.com/chrishokamp/graph-translation-memory",
   "dependencies": {
     "q": "^1.0.1",
-    "mongodb": "^1.4.19"
+    "mongodb": "^1.4.19",
+    "express": "^4.10.2",
+    "body-parser": "^1.9.2",
+    "http": "0.0.0",
+    "method-override": "^2.3.0",
+    "express-params": "0.0.3",
+    "cors": "^2.5.2"
   },
   "devDependencies": {
     "object-hash": "^0.3.0"

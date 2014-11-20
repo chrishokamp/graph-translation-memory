@@ -1,6 +1,17 @@
 var Q = require('q');
-
 var ObjectID = require('mongodb').ObjectID;
+
+
+// Database Configuration
+var env = process.env.NODE_ENV || 'development';
+
+if ('development' == env) {
+
+}
+
+if ('production' == env) {
+
+}
 
 function TMInterface(collection) {
   this.collection= collection;

@@ -12,11 +12,11 @@ var tmFile1;
 var tmFile2;
 var tmInterface;
 
-var collection, db;
 var url = 'mongodb://127.0.0.1:27017/';
 var dbName = 'testFixtureTMdb';
 var dbUri = url + dbName;
 
+var collection;
 var collectionName = 'nodes';
 
 describe('graphtm integration tests', function () {
@@ -31,8 +31,6 @@ describe('graphtm integration tests', function () {
       tmFile1 = {lang: lang1, filename: filename1};
       tmFile2 = {lang: lang2, filename: filename2};
 
-      var dbName = 'testFixtureTMdb';
-      var collectionName = 'nodes';
       // create index on the collection
       MongoClient.connect(dbUri, function(err, db) {
         if (err) throw err;
