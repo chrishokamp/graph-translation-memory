@@ -43,7 +43,6 @@ app.use(methodOverride());
 
 params.extend(app);
 
-
 //Bootstrap routes - remember that routes must be added after application middleware
 var dbUri = dbUrl + dbName;
 MongoClient.connect(dbUri, function(err, db) {

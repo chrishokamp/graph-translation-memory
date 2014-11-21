@@ -3,9 +3,13 @@
 var path = require('path');
 module.exports = function(app, tmInterface) {
 
+  // parse requests to /tm using params
+
   app.get('/', function(req, res) {
-    res.send(200, 'you rule - keep the hustle strong');
+    res.status(200).send('you rule - keep the hustle strong');
+    tmInterface.findTranslations(testNode.lang, testNode.segment, 'tr')
   });
+
   // User Routes
   //var users = require('../controllers/users');
 
