@@ -5,14 +5,14 @@ var path = require('path');
 module.exports = function(app, tmInterface) {
 
   // parse requests to /tm using params
-
   app.get('/', function(req, res) {
     var sourcelang = req.param('sourcelang');
     console.log('Lang: ' + sourcelang);
     var segment = req.param('segment');
     console.log('Segment: ' + segment);
 
-    tmInterface.findTranslations(sourcelang, segment, 'de')
+    // TODO: this should return all translations
+    tmInterface.findTranslations(sourcelang, segment)
       .then(function(matches) {
         res.status(200).send(matches);
       }, function(err) {

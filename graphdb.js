@@ -17,41 +17,70 @@ function TMInterface(collection) {
   this.collection= collection;
 }
 
-TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
+TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetLang, fuzzy) {
   var self = this;
-  var deferred = Q.defer();
+  if (!fuzzy || typeof(fuzzy) !== 'boolean') {
+    fuzzy = false;
+  }
 
-      self.collection.find({ lang: qLang, $text: { $search: qSegment}},
-        { score: { $meta: "textScore" },
-          edges: 1
-        },
-        function(err, cursor) {
-          if (err) deferred.reject(err);
-          cursor.toArray(
-            function(err, items) {
-              if (err) deferred.reject(err);
-              // TODO: extend this to list of lists, because we will find multiple fuzzy matches
-              if (items.length >0 ){
-                var item = items[0]
-                // get the object ids, then return those
-                // TODO: this throws an error if the item has no edges
-                if (item.edges) {
-                  self.collection.find({_id: {$in: item.edges}}, function(err,cursor) {
-                    if (err) deferred.reject(err);
-                    cursor.toArray(function(err,matches) {
-                      if (err) deferred.reject(err);
-                      deferred.resolve(matches);
-                    })
+  var deferred = Q.defer();
+  var translationCallback = function (err, cursor) {
+    if (err) deferred.reject(err);
+    cursor.toArray(
+      function (err, items) {
+        if (err) deferred.reject(err);
+        if (items.length > 0) {
+          // Working - this should be Async
+          var translationPromises = items.map(function(item) {
+            var itemDeferred = Q.defer();
+            // get the object ids, then return those
+            if (item.edges) {
+              self.collection.find({_id: {$in: item.edges}}, function (err, cursor) {
+                if (err) itemDeferred.reject(err);
+                cursor.toArray(function (err, matches) {
+                  if (err) itemDeferred.reject(err);
+                  // filter matches to only those of lang = targetLang
+                  var targetLangMatches = matches.filter(function(item) {
+                    return item.lang == targetLang;
                   });
-                }
-              } else {
-                deferred.resolve([]);
-              }
+                  itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': targetLangMatches});
+                })
+              });
             }
-          );
-        });
+            return itemDeferred.promise;
+          });
+          var allPromises = Q.all(translationPromises);
+          allPromises.then(
+            function(mapObjects) {
+              deferred.resolve(mapObjects);
+            },
+            function(err) {
+              deferred.reject(err);
+            }
+          )
+        } else {
+          deferred.resolve([]);
+        }
+      }
+    );
+  }
+
+  if (fuzzy) {
+    // TODO: edges do not currently store their targetLangs, so we need to query for the objectIds of the edges, and then check their target langs
+    // this could get very inefficient if a node has many matches, and it also wastes our index on 'target.lang'
+    self.collection.find({lang: qLang, $text: {$search: qSegment}},
+      {
+        score: {$meta: "textScore"},
+        edges: 1
+      }, translationCallback)
+  } else {
+    // using quotes looks only for an exact phrasal match
+    self.collection.find({lang: qLang, $text: {$search: '"' + qSegment + '"'}}
+      , translationCallback)
+  }
   return deferred.promise;
 }
+
 // given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
 // return all edges to this translation node
 
@@ -128,11 +157,12 @@ TMInterface.prototype.addEntry = function(tmObj) {
   return deferred.promise;
 }
 
+// TODO: we currently do not store the lang id in the edges, only the mongo object ID
+// What other metadata belongs on an edge
 TMInterface.prototype.addEntries = function (tmObjList) {
   var self = this;
   var deferred = Q.defer();
 
-  // todo: chain promises to see if TM has the entry (check true/false)
   var mongoObjects = Q.all(tmObjList.map(function(tmObj) {
     return self.addEntry(tmObj);
   }));
