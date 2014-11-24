@@ -30,16 +30,22 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, target) {
           cursor.toArray(
             function(err, items) {
               if (err) deferred.reject(err);
-              // TODO: extend this to list of lists
+              // TODO: extend this to list of lists, because we will find multiple fuzzy matches
               if (items.length >0 ){
                 var item = items[0]
                 // get the object ids, then return those
-                self.collection.find({_id: {$in: item.edges}}, function(err,cursor) {
-                  cursor.toArray(function(err,matches) {
+                // TODO: this throws an error if the item has no edges
+                if (item.edges) {
+                  self.collection.find({_id: {$in: item.edges}}, function(err,cursor) {
                     if (err) deferred.reject(err);
-                    deferred.resolve(matches);
-                  })
-                });
+                    cursor.toArray(function(err,matches) {
+                      if (err) deferred.reject(err);
+                      deferred.resolve(matches);
+                    })
+                  });
+                }
+              } else {
+                deferred.resolve([]);
               }
             }
           );

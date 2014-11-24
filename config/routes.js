@@ -1,4 +1,5 @@
 'use strict';
+var Q = require('q');
 
 var path = require('path');
 module.exports = function(app, tmInterface) {
@@ -6,8 +7,17 @@ module.exports = function(app, tmInterface) {
   // parse requests to /tm using params
 
   app.get('/', function(req, res) {
-    res.status(200).send('you rule - keep the hustle strong');
-    tmInterface.findTranslations(testNode.lang, testNode.segment, 'tr')
+    var sourcelang = req.param('sourcelang');
+    console.log('Lang: ' + sourcelang);
+    var segment = req.param('segment');
+    console.log('Segment: ' + segment);
+
+    tmInterface.findTranslations(sourcelang, segment, 'de')
+      .then(function(matches) {
+        res.status(200).send(matches);
+      }, function(err) {
+        res.status(500).send(err);
+      });
   });
 
   // User Routes
