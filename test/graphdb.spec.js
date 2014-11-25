@@ -347,7 +347,7 @@ describe('Graph DB tests', function () {
       .then(
       function (newNodes) {
         var testNode = newTranslationNodes[0];
-        // the last arg is 'false' because we don't want fuzzy matches
+        // the last arg is 'false' because we _don't_ want fuzzy matches
         tmInterface.findTargetTranslations(testNode.lang, testNode.segment, targetLang, false)
           .then(
           function (res) {
