@@ -40,10 +40,6 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
                 if (err) itemDeferred.reject(err);
                 cursor.toArray(function (err, matches) {
                   if (err) itemDeferred.reject(err);
-                  // filter matches to only those of lang = targetLang
-                  //var targetLangMatches = matches.filter(function(item) {
-                  //  return item.lang == targetLang;
-                  //});
                   itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': matches});
                 })
               });
@@ -134,6 +130,8 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
     // this could get very inefficient if a node has many matches, and it also wastes our index on 'target.lang'
     self.collection.find({lang: qLang, $text: {$search: qSegment}},
       {
+        lang: 1,
+        segment: 1,
         score: {$meta: "textScore"},
         edges: 1
       }, translationCallback)

@@ -41,9 +41,9 @@ describe('Graph DB tests', function () {
         tmInterface = new graphtm(collection);
         //collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
         collection.ensureIndex({lang: 1, segment: "text"}, function() {
-          collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
+          //collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
             done();
-          });
+          //});
         });
       });
     });
@@ -167,7 +167,6 @@ describe('Graph DB tests', function () {
       tmInterface.addEntry(newNode)
         .then(
         function(res) {
-          console.log('Checking hasEntry');
           var entry = tmInterface.hasEntry(newNode);
           entry.then(
             function(exists) {
@@ -221,7 +220,7 @@ describe('Graph DB tests', function () {
         }
       )
         .fail(function (reason) {
-          console.log('ERROR');
+          console.error('ERROR');
           console.error(reason.stack);
           done();
         })
@@ -244,14 +243,12 @@ describe('Graph DB tests', function () {
           tmInterface.findTargetTranslations(testNode.lang, testNode.segment, targetLang)
             .then(
             function (res) {
-              console.log('RES1:');
-              console.log(res);
               expect(res.length).toEqual(1);
               expect(res[0].translations.length).toEqual(1);
               done();
             }).fail(
             function (err) {
-              console.log('testTargetTranslations Failed');
+              console.error('testTargetTranslations Failed');
               console.error(err.stack);
             }
           );
@@ -278,14 +275,12 @@ describe('Graph DB tests', function () {
           tmInterface.findTranslations(testNode.lang, testNode.segment)
             .then(
             function (res) {
-              console.log('RES:');
-              console.log(res);
               expect(res.length).toEqual(1);
               expect(res[0].translations.length).toEqual(4);
               done();
             }).fail(
             function (err) {
-              console.log('test findTranslations failed');
+              console.error('test findAllTranslations failed');
               console.error(err.stack);
             }
           );
@@ -297,12 +292,80 @@ describe('Graph DB tests', function () {
     });
   });
 
-    //it('should be able to return fuzzy matches when requested')
-    //
-    //
-    //it('should only return exact matches when requested')
+  it('should be able to return fuzzy matches when requested', function (done) {
+    var newTranslationNodes = [
+      {'lang': 'en', 'segment': 'this is a test.'},
+      {'lang': 'en', 'segment': 'these are tests.'},
+      {'lang': 'en', 'segment': 'is a test?'},
+      // TODO: 'this is a testy.' doesn't match because of the way mongo does fulltext search
+      {'lang': 'en', 'segment': 'this is a testy.'},
+      {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+      {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
+      {'lang': 'de', 'segment': 'Dies it.'},
+      {'lang': 'tr', 'segment': 'bu bir deneme.'}
+    ];
 
+    var targetLang = 'de';
+    tmInterface.addEntries(newTranslationNodes)
+      .then(
+      function (newNodes) {
+        var testNode = newTranslationNodes[0];
+        tmInterface.findTargetTranslations(testNode.lang, testNode.segment, targetLang, true)
+          .then(
+          function (res) {
+            expect(res.length).toEqual(3);
+            expect(res[0].translations.length).toEqual(3);
+            done();
+          }).fail(
+          function (err) {
+            console.error('test fuzzy translations Failed');
+            console.error(err.stack);
+          }
+        );
+      }).fail(
+      function (err) {
+        console.error(err.stack);
+      }
+    )
+  });
 
+  it('should only return exact matches when requested', function (done) {
+    var newTranslationNodes = [
+      {'lang': 'en', 'segment': 'this is a test.'},
+      {'lang': 'en', 'segment': 'these are tests.'},
+      {'lang': 'en', 'segment': 'is a test?'},
+      // TODO: 'this is a testy.' doesn't match because of the way mongo does fulltext search
+      {'lang': 'en', 'segment': 'this is a testy.'},
+      {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+      {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
+      {'lang': 'de', 'segment': 'Dies it.'},
+      {'lang': 'tr', 'segment': 'bu bir deneme.'}
+    ];
+
+    var targetLang = 'de';
+    tmInterface.addEntries(newTranslationNodes)
+      .then(
+      function (newNodes) {
+        var testNode = newTranslationNodes[0];
+        // the last arg is 'false' because we don't want fuzzy matches
+        tmInterface.findTargetTranslations(testNode.lang, testNode.segment, targetLang, false)
+          .then(
+          function (res) {
+            expect(res.length).toEqual(1);
+            expect(res[0].translations.length).toEqual(3);
+            done();
+          }).fail(
+          function (err) {
+            console.error('test exact translations Failed');
+            console.error(err.stack);
+          }
+        );
+      }).fail(
+      function (err) {
+        console.error(err.stack);
+      }
+    )
+  });
 
 });
 
