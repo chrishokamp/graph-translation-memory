@@ -39,7 +39,8 @@ describe('Graph DB tests', function () {
       db.collection(collectionName, function(err, _collection_) {
         collection = _collection_;
         tmInterface = new graphtm(collection);
-        collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
+        //collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
+        collection.ensureIndex({lang: 1, segment: "text"}, function() {
           collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
             done();
           });
@@ -210,23 +211,23 @@ describe('Graph DB tests', function () {
 
   describe('retrieving translations', function () {
 
-    it('should return an empty list if a node does not exist', function(done) {
+    it('should return an empty list if a node does not exist', function (done) {
       var fakeNode = {'lang': 'xx', 'segment': 'xxx xxx xxx'};
       tmInterface.findTargetTranslations(fakeNode.lang, fakeNode.segment)
         .then(
-        function(res) {
+        function (res) {
           expect(res.length).toEqual(0);
           done();
         }
       )
-        .fail(function(reason) {
+        .fail(function (reason) {
           console.log('ERROR');
           console.error(reason.stack);
           done();
         })
     });
 
-    it('should be able to fetch the translations in a specified target language for a node that has some', function(done) {
+    it('should be able to fetch the translations in a specified target language for a node that has some', function (done) {
       var newTranslationNodes = [
         {'lang': 'en', 'segment': 'this is a test.'},
         {'lang': 'de', 'segment': 'Dies ist ein Test.'},
@@ -238,60 +239,71 @@ describe('Graph DB tests', function () {
       var targetLang = 'tr'
       tmInterface.addEntries(newTranslationNodes)
         .then(
-        function(newNodes) {
+        function (newNodes) {
           var testNode = newTranslationNodes[1];
           tmInterface.findTargetTranslations(testNode.lang, testNode.segment, targetLang)
             .then(
-            function(res) {
+            function (res) {
+              console.log('RES1:');
+              console.log(res);
               expect(res.length).toEqual(1);
+              expect(res[0].translations.length).toEqual(1);
               done();
             }).fail(
-            function(err) {
+            function (err) {
+              console.log('testTargetTranslations Failed');
               console.error(err.stack);
             }
           );
         }).fail(
-        function(err) {
+        function (err) {
           console.error(err.stack);
         }
       )
     });
 
-    //it('should be able to fetch all of the translations available for a node', function() {
-    //  var newTranslationNodes = [
-    //    {'lang': 'en', 'segment': 'this is a test.'},
-    //    {'lang': 'de', 'segment': 'Dies ist ein Test.'},
-    //    {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
-    //    {'lang': 'de', 'segment': 'Dies it.'},
-    //    {'lang': 'tr', 'segment': 'bu bir deneme.'}
-    //  ];
-    //
-    //  console.log('ADDING');
-    //  tmInterface.addEntries(newTranslationNodes)
-    //    .then(
-    //    function(newNodes) {
-    //      var testNode = newTranslationNodes[1];
-    //      // WORKING - implement this to find all available translations
-    //      tmInterface.findTranslations(testNode.lang, testNode.segment)
-    //        .then(
-    //        function(res) {
-    //          console.log('RES:');
-    //          console.log(res);
-    //          expect(res.length).toEqual(4);
-    //          done();
-    //        }).fail(
-    //        function(err) {
-    //          console.error(err.stack);
-    //        }
-    //      );
-    //    }).fail(
-    //    function(err) {
-    //      console.error(err.stack);
-    //    }
-    //  )
-    //
-    //});
+    it('should be able to fetch all of the translations available for a node', function (done) {
+      var newTranslationNodes = [
+        {'lang': 'en', 'segment': 'this is a test.'},
+        {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+        {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
+        {'lang': 'de', 'segment': 'Dies it.'},
+        {'lang': 'tr', 'segment': 'bu bir deneme.'}
+      ];
+
+      tmInterface.addEntries(newTranslationNodes)
+        .then(
+        function (newNodes) {
+          var testNode = newTranslationNodes[1];
+          tmInterface.findTranslations(testNode.lang, testNode.segment)
+            .then(
+            function (res) {
+              console.log('RES:');
+              console.log(res);
+              expect(res.length).toEqual(1);
+              expect(res[0].translations.length).toEqual(4);
+              done();
+            }).fail(
+            function (err) {
+              console.log('test findTranslations failed');
+              console.error(err.stack);
+            }
+          );
+        }).fail(
+        function (err) {
+          console.error(err.stack);
+        }
+      )
+    });
   });
+
+    //it('should be able to return fuzzy matches when requested')
+    //
+    //
+    //it('should only return exact matches when requested')
+
+
+
 });
 
 

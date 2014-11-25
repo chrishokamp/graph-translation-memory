@@ -17,6 +17,71 @@ function TMInterface(collection) {
   this.collection= collection;
 }
 
+// given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
+// TODO: almost all of this code is duplicated in TMInterface.prototype.findTargetTranslations
+TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
+  var self = this;
+  if (!fuzzy || typeof(fuzzy) !== 'boolean') {
+    fuzzy = false;
+  }
+
+  var deferred = Q.defer();
+  var translationCallback = function (err, cursor) {
+    if (err) deferred.reject(err);
+    cursor.toArray(
+      function (err, items) {
+        if (err) deferred.reject(err);
+        if (items.length > 0) {
+          var translationPromises = items.map(function(item) {
+            var itemDeferred = Q.defer();
+            // get the object ids, then return those
+            if (item.edges) {
+              self.collection.find({_id: {$in: item.edges}}, function (err, cursor) {
+                if (err) itemDeferred.reject(err);
+                cursor.toArray(function (err, matches) {
+                  if (err) itemDeferred.reject(err);
+                  // filter matches to only those of lang = targetLang
+                  //var targetLangMatches = matches.filter(function(item) {
+                  //  return item.lang == targetLang;
+                  //});
+                  itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': matches});
+                })
+              });
+            }
+            return itemDeferred.promise;
+          });
+          var allPromises = Q.all(translationPromises);
+          allPromises.then(
+            function(mapObjects) {
+              deferred.resolve(mapObjects);
+            },
+            function(err) {
+              deferred.reject(err);
+            }
+          )
+        } else {
+          deferred.resolve([]);
+        }
+      }
+    );
+  }
+
+  if (fuzzy) {
+    // TODO: edges do not currently store their targetLangs, so we need to query for the objectIds of the edges, and then check their target langs
+    // this could get very inefficient if a node has many matches, and it also wastes our index on 'target.lang'
+    self.collection.find({lang: qLang, $text: {$search: qSegment}},
+      {
+        score: {$meta: "textScore"},
+        edges: 1
+      }, translationCallback)
+  } else {
+    // using quotes looks only for an exact phrasal match
+    self.collection.find({lang: qLang, $text: {$search: '"' + qSegment + '"'}}
+      , translationCallback)
+  }
+  return deferred.promise;
+}
+
 TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetLang, fuzzy) {
   var self = this;
   if (!fuzzy || typeof(fuzzy) !== 'boolean') {
@@ -30,7 +95,6 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
       function (err, items) {
         if (err) deferred.reject(err);
         if (items.length > 0) {
-          // Working - this should be Async
           var translationPromises = items.map(function(item) {
             var itemDeferred = Q.defer();
             // get the object ids, then return those
@@ -81,9 +145,6 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
   return deferred.promise;
 }
 
-// given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
-// return all edges to this translation node
-
 TMInterface.prototype.hasEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
@@ -100,8 +161,7 @@ TMInterface.prototype.hasEntry = function(tmObj) {
   return deferred.promise;
 }
 
-// should only be called if entry doesn't exist
-
+// add a set of translations (links) to an existing translation node
 TMInterface.prototype.addTranslations = function(objectId, translations) {
   var deferred = Q.defer();
   var self = this;
