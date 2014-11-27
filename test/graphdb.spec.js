@@ -1,19 +1,7 @@
 var graphtm = require('../graphdb');
 
-var mongo = require('mongodb'),
-  MongoClient = require('mongodb').MongoClient,
-  ObjectID = require('mongodb').ObjectID;
+var MongoClient = require('mongodb').MongoClient;
 
-//var Server = mongo.Server,
-//    Db = mongo.Db,
-//    BSON = mongo.BSONPure;
-
-// points to the collection object that we'll be using in the tests
-//var collection, tmInterface;
-//var server = new Server('127.0.0.1', 27017);
-//var db = new Db('testFixtureTMdb', server);
-
-//collection = db.collection('nodes');
 // remember that more meta data can be added to any field if/when it is needed
 var tmInterface;
 var collection, db;

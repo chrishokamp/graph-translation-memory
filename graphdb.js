@@ -36,7 +36,10 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
             var itemDeferred = Q.defer();
             // get the object ids, then return those
             if (item.edges) {
-              self.collection.find({_id: {$in: item.edges}}, function (err, cursor) {
+              var edgeIds = item.edges.map(function(edge) {
+                return edge._id;
+              })
+              self.collection.find({_id: {$in: edgeIds}}, function (err, cursor) {
                 if (err) itemDeferred.reject(err);
                 cursor.toArray(function (err, matches) {
                   if (err) itemDeferred.reject(err);
@@ -95,7 +98,10 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
             var itemDeferred = Q.defer();
             // get the object ids, then return those
             if (item.edges) {
-              self.collection.find({_id: {$in: item.edges}}, function (err, cursor) {
+              var edgeIds = item.edges.map(function(edge) {
+                return edge._id;
+              })
+              self.collection.find({_id: {$in: edgeIds}}, function (err, cursor) {
                 if (err) itemDeferred.reject(err);
                 cursor.toArray(function (err, matches) {
                   if (err) itemDeferred.reject(err);
@@ -167,14 +173,10 @@ TMInterface.prototype.addTranslations = function(objectId, translations) {
   self.collection.update({_id: idObj}, {$addToSet: { edges: {$each: translations }}}, function(err) {
 
     if (err) {
-      console.error('Error updating translation');
-      console.error(err);
       deferred.reject(err);
     } else {
       self.collection.findOne({_id: idObj}, function (err, obj) {
         if (err) {
-          console.error('Error updating translation');
-          console.error(err);
           deferred.reject(err);
         } else {
           deferred.resolve(obj);
@@ -228,14 +230,14 @@ TMInterface.prototype.addEntries = function (tmObjList) {
   // after all of the entries have been added or retrieved, add their object ids to every other entry in the list
   mongoObjects.done(function(objects) {
     var ids = objects.map(function(obj) {
-      return obj._id;
+      return {'_id': obj._id, 'lang': obj.lang};
     });
     var updateProms = ids.map(
-
-      function(nodeId, idx, idList) {
+      function(nodeRef, idx, idList) {
         // copy the list of ids, splice out the current index, and add the others as edges to the current obj
         var others = idList.slice()
         others.splice(idx, 1);
+        var nodeId = nodeRef._id;
         var updateProm = self.addTranslations(nodeId, others);
         return updateProm;
       });
