@@ -29,10 +29,6 @@ if ('production' == env) {
   dbUrl = config.development.db.url;
 }
 
-// Connect to database
-// we pass in the collection obj to init the graphTM
-//var db = require('./server/db/mongo').db;
-
 app.use(cors());
 // bodyParser should be above methodOverride
 app.use(bodyParser.urlencoded({

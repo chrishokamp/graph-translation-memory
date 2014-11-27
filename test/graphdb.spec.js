@@ -60,18 +60,6 @@ describe('Graph DB tests', function () {
      }
      **/
 
-      // when we get a new segment:
-      // (1) check if there is already an entry for lang 1
-      //      - if yes, get its id, if no, create it
-      // (2) check if there is already an entry for lang 2
-      //      - if yes, get its id, if no, create it
-      // (3) add lang1's edge entry to the 'edges' field of lang2
-      // (4) add lang2's edge entry to the 'edges' field of lang1
-
-      // db.tm.ensureIndex({"lang": 1})
-      // db.tm.ensureIndex({"segment": "text"})
-      // db.tm.ensureIndex({"edges.lang": 1})
-
     // Mongo textIndex Notes
       //Specify the Index Language within the Document
       //
