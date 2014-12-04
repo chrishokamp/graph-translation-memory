@@ -24,7 +24,8 @@
     "http": "0.0.0",
     "method-override": "^2.3.0",
     "express-params": "0.0.3",
-    "cors": "^2.5.2"
+    "cors": "^2.5.2",
+    "isvalid-express": "0.0.7"
   },
   "devDependencies": {
     "object-hash": "^0.3.0"

@@ -2,9 +2,10 @@
 var Q = require('q');
 
 var path = require('path');
+var validate = require('isvalid-express');
+
 module.exports = function(app, tmInterface) {
 
-  // WORKING: map methods to the taus TM, or MyMemory, or both
   // parse requests to /tm using params
   // WORKING - map this to /tm/:sourcelang/:targetlang using the swagger syntax
   app.get('/tm', function(req, res) {
@@ -18,12 +19,28 @@ module.exports = function(app, tmInterface) {
       }, function(err) {
         res.status(500).send(err);
       });
+
   });
 
+  // Validate something like this: {"nodes": [{"lang": "en", "segment":"test seg"}]}
+  var newTranslationsValidationSchema = {
+    "nodes": [
+      {
+        "lang"   : {type: String, required: true},
+        "segment": {type: String, required: true}
+      }
+    ]
+  };
+
   // add a TM entry
-  //app.post('/tm', function(req, res) {
-  //
-  //}
+  app.post('/tm', validate.body(newTranslationsValidationSchema), function(req, res) {
+    var newTMObj = req.body;
+    // req.body is now validated and no further validation needs to take place.
+    // If body could not be validated, an error was sent to the express error handler.
+    console.log('req body: ');
+    console.log(newTMObj);
+    res.send(200);
+  });
 
   // update a TM entry
   //app.put('/tm', function(req, res) {
@@ -31,3 +48,4 @@ module.exports = function(app, tmInterface) {
   //}
 
 }
+

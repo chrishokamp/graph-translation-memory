@@ -24,8 +24,8 @@ describe('graphtm integration tests', function () {
   beforeEach(
     function(done) {
       // remember that paths are relative to the EbmtParser file location
-      var filename1 = 'test/1000.en';
-      var filename2 = 'test/1000.de';
+      var filename1 = 'test/parsers/test_data/1000.en';
+      var filename2 = 'test/parsers/test_data/1000.de';
       var lang1 = 'en';
       var lang2 = 'de';
       tmFile1 = {lang: lang1, filename: filename1};
@@ -85,7 +85,7 @@ describe('parse files and insert', function () {
     )
   });
 
-  // assert that duplicates cannot be supported
+  // assert that duplicates cannot be returned
 
 });
 

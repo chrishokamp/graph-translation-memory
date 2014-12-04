@@ -1,4 +1,4 @@
-var EbmtParser = require('../parsers/EbmtParser');
+var EbmtParser = require('../../parsers/EbmtParser');
 
 var tmFile1;
 var tmFile2;
@@ -7,8 +7,8 @@ var tmFile2;
 beforeEach(
   function() {
     // remember that paths are relative to the EbmtParser file location
-    var filename1 = 'test/1000.en';
-    var filename2 = 'test/1000.de';
+    var filename1 = 'test/parsers/test_data/1000.en';
+    var filename2 = 'test/parsers/test_data/1000.de';
     var lang1 = 'en';
     var lang2 = 'de';
     tmFile1 = {lang: lang1, filename: filename1};
