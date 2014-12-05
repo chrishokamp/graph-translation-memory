@@ -6,8 +6,8 @@ var express = require('express'),
   methodOverride = require('method-override'),
   params = require('express-params'),
   cors = require('cors'),
-  config = require('./config/config'),
-  noop = require('node-noop')
+  config = require('./config/config');
+  //noop = require('node-noop')
 
 var app = express();
 var graphtm = require('./graphdb');
@@ -41,7 +41,7 @@ params.extend(app);
 
 var server;
 // this gets reassigned to the callback
-var callback = noop;
+var callback = function () {};
 
 //Bootstrap routes - remember that routes must be added after application middleware
 var dbUri = dbUrl + dbName;

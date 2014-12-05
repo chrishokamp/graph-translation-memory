@@ -19,7 +19,6 @@ module.exports = function(app, tmInterface) {
       }, function(err) {
         res.status(500).send(err);
       });
-
   });
 
   // Validate something like this: {"nodes": [{"lang": "en", "segment":"test seg"}]}
@@ -34,13 +33,17 @@ module.exports = function(app, tmInterface) {
 
   // add a TM entry
   app.post('/tm', validate.body(newTranslationsValidationSchema), function(req, res) {
-    var nodes = req.body.nodes;
-
-    // req.body is now validated and no further validation needs to take place.
     // If body could not be validated, an error was sent to the express error handler.
-    console.log('req body: ');
-    console.log(req.body);
-    res.send({});
+
+    var nodes = req.body.nodes;
+    console.log('Nodes:');
+    console.log(nodes);
+    tmInterface.addEntries(nodes)
+    .then(function(newNodes) {
+      res.status(200).send(newNodes);
+    }, function(err) {
+      res.status(500).send(err);
+    });
   });
 
   // update a TM entry
