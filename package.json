@@ -25,7 +25,9 @@
     "method-override": "^2.3.0",
     "express-params": "0.0.3",
     "cors": "^2.5.2",
-    "isvalid-express": "0.0.7"
+    "isvalid-express": "0.0.7",
+    "frisby": "^0.8.3",
+    "node-noop": "0.0.1"
   },
   "devDependencies": {
     "object-hash": "^0.3.0"

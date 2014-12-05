@@ -6,7 +6,8 @@ var express = require('express'),
   methodOverride = require('method-override'),
   params = require('express-params'),
   cors = require('cors'),
-  config = require('./config/config')
+  config = require('./config/config'),
+  noop = require('node-noop')
 
 var app = express();
 var graphtm = require('./graphdb');
@@ -17,15 +18,14 @@ var MongoClient = require('mongodb').MongoClient;
 var env = process.env.NODE_ENV || 'development';
 
 var dbName, dbUrl, collectionName;
-if ('development' == env) {
-  dbName = config.development.db.name;
-  collectionName = config.development.db.collection;
-  dbUrl = config.development.db.url;
-}
 
-if ('production' == env) {
+if ('production' === env) {
   dbName = config.production.db.name;
   collectionName = config.production.db.collection;
+  dbUrl = config.development.db.url;
+} else {
+  dbName = config.development.db.name;
+  collectionName = config.development.db.collection;
   dbUrl = config.development.db.url;
 }
 
@@ -39,6 +39,10 @@ app.use(methodOverride());
 
 params.extend(app);
 
+var server;
+// this gets reassigned to the callback
+var callback = noop;
+
 //Bootstrap routes - remember that routes must be added after application middleware
 var dbUri = dbUrl + dbName;
 MongoClient.connect(dbUri, function(err, db) {
@@ -49,12 +53,22 @@ MongoClient.connect(dbUri, function(err, db) {
     collection.ensureIndex({lang: 1, segment: "text", "edges.lang": 1}, function() {
       collection.ensureIndex( { lang: 1, segment: 1 }, { unique: true }, function() {
         require('./config/routes')(app, tmInterface);
-        var server = http.createServer(app);
+        server = http.createServer(app);
         server.listen(process.env.PORT || 8899);
         console.log('graph TM express server is listening on port: %s', server.address().port);
+        callback(server);
       });
     });
   });
 });
+
+module.exports = function(cb){
+    if(typeof server != 'undefined'){
+        cb(server); // If server is already defined don't wait
+    } else {
+        callback = cb;
+    }
+}
+
 
 

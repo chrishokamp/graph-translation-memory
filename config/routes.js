@@ -34,12 +34,13 @@ module.exports = function(app, tmInterface) {
 
   // add a TM entry
   app.post('/tm', validate.body(newTranslationsValidationSchema), function(req, res) {
-    var newTMObj = req.body;
+    var nodes = req.body.nodes;
+
     // req.body is now validated and no further validation needs to take place.
     // If body could not be validated, an error was sent to the express error handler.
     console.log('req body: ');
-    console.log(newTMObj);
-    res.send(200);
+    console.log(req.body);
+    res.send({});
   });
 
   // update a TM entry
