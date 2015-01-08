@@ -26,7 +26,9 @@ module.exports = function(app, tmInterface) {
     "nodes": [
       {
         "lang"   : {type: String, required: true},
-        "segment": {type: String, required: true}
+        "segment": {type: String, required: true},
+        "createdBy": {type: String, required: false},
+        "date": {type: String, required: false}
       }
     ]
   };
