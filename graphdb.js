@@ -66,8 +66,6 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
   }
 
   if (fuzzy) {
-    // TODO: edges do not currently store their targetLangs, so we need to query for the objectIds of the edges, and then check their target langs
-    // this could get very inefficient if a node has many matches, and it also wastes our index on 'target.lang'
     self.collection.find({lang: qLang, $text: {$search: qSegment}},
       {
         score: {$meta: "textScore"},
@@ -151,7 +149,6 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
 TMInterface.prototype.hasEntry = function(tmObj) {
   var self = this;
   var deferred = Q.defer();
-  //MongoClient.connect(this.dbUrl(), function(err, db) {
     // using quotes looks only for an exact phrasal match
     self.collection.findOne( { lang: tmObj.lang, $text: { $search: '"' + tmObj.segment + '"'}},function(err, item) {
       if (err) deferred.reject(err);
@@ -164,7 +161,7 @@ TMInterface.prototype.hasEntry = function(tmObj) {
   return deferred.promise;
 }
 
-// add a set of translations (links) to an existing translation node
+// add a set of translations (links) to an existing translation nodes
 TMInterface.prototype.addTranslations = function(objectId, translations) {
   var deferred = Q.defer();
   var self = this;
@@ -216,8 +213,7 @@ TMInterface.prototype.addEntry = function(tmObj) {
   return deferred.promise;
 }
 
-// TODO: we currently do not store the lang id in the edges, only the mongo object ID
-// What other metadata belongs on an edge
+// TODO: What other metadata belongs on an edge?
 TMInterface.prototype.addEntries = function (tmObjList) {
   var self = this;
   var deferred = Q.defer();
@@ -248,6 +244,99 @@ TMInterface.prototype.addEntries = function (tmObjList) {
         console.error(err);
       }
     );
+  });
+  return deferred.promise;
+}
+
+
+// retrieve an entry
+// get its objectID
+// retrieve all of its links
+// delete their reference to this object
+// return the deleted node
+TMInterface.prototype.deleteEntry = function (objectId) {
+  var self = this;
+  var deferred = Q.defer();
+  var idObj = new ObjectID(objectId);
+
+  self.collection.findOne({'_id': idObj},function(err, item) {
+    if (err) deferred.reject(err);
+    if (item) {
+      // delete the node and all of its links
+      self.collection.remove({'_id': idObj}, function(err, status) {
+        if (item.edges === undefined) item.edges = [];
+        var edgeDeletePromises = item.edges.map(function (edge) {
+          var deleteDeferred = Q.defer();
+          var edgeIds = item.edges.map(function (edge) {
+            return edge._id;
+          });
+          // TODO: - WORKING - just remove the edge, not the whole node!
+          self.collection.find({_id: {$in: edgeIds}}, function (err, cursor) {
+            if (err) deleteDeferred.reject(err);
+            cursor.toArray(function (err, matches) {
+              if (err) deleteDeferred.reject(err);
+              matches.forEach(function(node) {
+                self.collection.update({'_id': node._id}, {'$pull': {'edges': {'_id': idObj}}}, function(err,status) {
+                 deleteDeferred.resolve(true);
+                });
+              });
+            })
+          });
+          return deleteDeferred.promise;
+        });
+        var allDeleted = Q.all(edgeDeletePromises);
+        allDeleted.then(
+          function(deleted) {
+            deferred.resolve(deleted);
+          },
+          function(err) {
+            deferred.reject(err);
+          }
+        );
+      });
+    } else {
+      deferred.resolve(false);
+    }
+  });
+
+  return deferred.promise;
+}
+
+// check if the object id is in the collection
+TMInterface.prototype.hasObject = function (objectId) {
+  var self = this;
+  var deferred = Q.defer();
+  var idObj = new ObjectID(objectId);
+
+  self.collection.findOne({ '_id': idObj},function(err, item) {
+    if (err) deferred.reject(err);
+    if (item) {
+      deferred.resolve(true);
+    } else {
+      deferred.resolve(false);
+    }
+  });
+  return deferred.promise;
+}
+
+// get an edge from a node by objectId
+// returns null if there's no edge
+//TMInterface.prototype.getEdge(function() {
+
+//})
+
+TMInterface.prototype.getNode = function(objectId) {
+  var self = this;
+  var deferred = Q.defer();
+  var idObj = new ObjectID(objectId);
+
+  self.collection.findOne({ '_id': idObj},function(err, item) {
+    if (err) deferred.reject(err);
+    if (item) {
+      deferred.resolve(item);
+    } else {
+      deferred.resolve(null);
+    }
   });
   return deferred.promise;
 }

@@ -98,7 +98,7 @@ describe('Graph DB tests', function () {
       //sv or swedish
       //tr or turkish
 
-    it('should be able to add an entry to the db', function(done) {
+    it('should be able to add a list of entries to the db', function(done) {
       // a translation node is a list of translation objects in one or more languages
       // note that multiple entries in the same language _are allowed_, provided that the text in the segment: property is different
       var newTranslationNodes = [
@@ -168,6 +168,22 @@ describe('Graph DB tests', function () {
         });
     });
 
+    it('should know if an objectId exists', function(done) {
+      var newNode = {'lang': 'en', 'segment': 'is a test.'};
+      tmInterface.addEntry(newNode)
+        .then(
+        function(res) {
+          var entry = tmInterface.hasObject(res._id);
+          entry.then(
+            function (exists) {
+              expect(exists).toBeTruthy();
+              done();
+            }).fail(function (err) {
+              console.error(err);
+            });
+        });
+    });
+
     it('should not insert duplicates', function(done) {
       var newNode = {'lang': 'en', 'segment': 'is a test.'};
       tmInterface.addEntry(newNode)
@@ -182,6 +198,80 @@ describe('Graph DB tests', function () {
           )
         });
     });
+
+    // this function is used by addEntries, but it's not unit tested
+    it('should be able to add a list of translations to a node', function(done) {
+      //tmInterface.addTranslations()
+      done();
+    });
+
+    it('should be able to delete an entry', function(done) {
+      // confirm that the entry and all of its links have been deleted
+      var newTranslationNodes = [
+        {'lang': 'en', 'segment': 'this is a test.'},
+        {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+        {'lang': 'tr', 'segment': 'bu bir deneme.'}
+      ];
+
+      var newNodes = tmInterface.addEntries(newTranslationNodes);
+      newNodes.then(
+        function (res) {
+          expect(res.length).toEqual(3);
+          res.forEach(function (newNode) {
+            expect(newNode._id).not.toBeUndefined();
+            expect(newNode.edges).not.toBeUndefined();
+            expect(newNode.edges.length).toEqual(2);
+          });
+
+          // now delete the first node and the edges pointing to it in the others
+          var existingNode = res[0];
+
+          var edgeIds = existingNode.edges.map(function(edge) {
+            return edge._id;
+          });
+
+          tmInterface.deleteEntry(existingNode._id)
+            .then(
+            function(res) {
+              // check if node was deleted
+              tmInterface.hasObject(existingNode._id).then(
+                function(hasObj) {
+                  expect(hasObj).toBeFalsy();
+
+                  // check if the references to this node in the node's edges were deleted
+                  edgeIds.forEach(function(edgeId, idx) {
+                    tmInterface.hasObject(edgeId).then(
+                        function(hasObj) {
+                          expect(hasObj).toBeTruthy();
+                          tmInterface.getNode(edgeId).then(
+                            function(node) {
+                              // there's only one edge left on the node
+                              expect(node.edges.length).toEqual(1);
+                              // it isn't a ref to the deleted node
+                              var incorrectMatches = node.edges.filter(
+                                function(edge) {
+                                  return edge._id === existingNode._id;
+                                }
+                              );
+                              expect(incorrectMatches.length).toEqual(0);
+                            }
+                          );
+                          // if this is the last node, then finish testing
+                          if (idx === edgeIds.length-1) done();
+                        }
+                    );
+                  });
+
+                }
+              );
+            });
+        }).fail(function (err) {
+          console.error(err);
+          done();
+        });
+
+    });
+
   });
 
   describe('retrieving translations', function () {
