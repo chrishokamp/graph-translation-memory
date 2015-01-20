@@ -132,8 +132,6 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
   }
 
   if (fuzzy) {
-    // TODO: edges do not currently store their targetLangs, so we need to query for the objectIds of the edges, and then check their target langs
-    // TODO: edges do store their target langs now
     // this could get very inefficient if a node has many matches, and it also wastes our index on 'target.lang'
     self.collection.find({lang: qLang, $text: {$search: qSegment}},
       {
