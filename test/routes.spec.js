@@ -146,6 +146,42 @@ describe('route tests', function () {
         .toss();
     });
 
+    it('should work like a concordancer', function() {
+      frisby.create('test returning exact or fuzzy matches')
+        .post('http://localhost:8899/tm', {
+          nodes: [
+            {'lang': 'en', 'segment': 'this is a test.'},
+            {'lang': 'en', 'segment': 'this a test.'},
+            {'lang': 'en', 'segment': 'this sentence is a test.'},
+            {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+            {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
+            {'lang': 'de', 'segment': 'Dies it.'},
+            {'lang': 'tr', 'segment': 'bu bir deneme.'}
+          ]
+        })
+        .expectStatus(200)
+        .expectHeaderContains('content-type', 'application/json')
+        .after(function(err, res, body) {
+          frisby.create('retrieve the fuzzy translations for a node')
+            .get('http://localhost:8899/concordancer?lang=en&query=this is a test')
+            .expectJSONLength(3)
+            .expectJSONTypes('?', {
+              '_id': String,
+              lang: String,
+              segment: String,
+              score: Number
+            })
+            .expectJSON('?', {
+              lang: 'en',
+              segment: 'this a test.'
+            })
+            .expectStatus(200)
+            .toss()
+        })
+        .toss();
+    });
+
+
     // deleting an entry
 
   });

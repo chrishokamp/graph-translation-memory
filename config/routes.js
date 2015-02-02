@@ -72,7 +72,6 @@ module.exports = function(app, tmInterface) {
       // note: this is a shallow copy, but that's ok, because we're not modifying the objects in the list
       var matches = origMatches.slice(0);
 
-
       // sort by segment length
       matches.sort(function(a,b) {
         if (a.segment.length > b.segment.length) {
@@ -95,7 +94,7 @@ module.exports = function(app, tmInterface) {
         return 0;
       });
 
-      // switch to decending order
+      // switch to descending order
       matches.reverse();
       return matches;
     }
