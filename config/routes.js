@@ -4,6 +4,11 @@ var Q = require('q');
 var path = require('path');
 var validate = require('isvalid-express');
 
+/**
+ *
+ * @param app: an express app instance
+ * @param tmInterface: an object implementing the tmInterface API
+ */
 module.exports = function(app, tmInterface) {
 
   // parse requests to /tm using params
@@ -54,6 +59,30 @@ module.exports = function(app, tmInterface) {
     }, function(err) {
       res.status(500).send(err);
     });
+  });
+
+  // query for monolingual concordances
+  app.get('/concordancer', function(req, res) {
+    var lang = req.param('lang');
+    var query = req.param('query');
+    var fuzzy = req.param('fuzzy');
+    // careful cast to boolean
+    if (fuzzy === 'true') {
+      fuzzy = true;
+    } else {
+      fuzzy = false;
+    }
+
+    // working - factor out the concordancing from the target translations
+    tmInterface.findTargetTranslations(sourcelang, segment, targetlang, fuzzy)
+      .then(function(matches) {
+        console.log('route: ');
+        console.log('MATCHES: ');
+        console.log(matches);
+        res.status(200).send(matches);
+      }, function(err) {
+        res.status(500).send(err);
+      });
   });
 
   // update a TM entry

@@ -100,8 +100,6 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
   if (!fuzzy || typeof(fuzzy) !== 'boolean') {
     fuzzy = false;
   }
-  console.log('findTargetTranslations');
-  console.log('fuzzy: ' + fuzzy);
 
   var deferred = Q.defer();
   var translationCallback = function (err, cursor) {
@@ -161,6 +159,32 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
     self.collection.find({lang: qLang, $text: {$search: '"' + qSegment + '"'}}
       , translationCallback)
   }
+  return deferred.promise;
+}
+
+/**
+ * find the monolingual concordances for a query
+ * @param lang
+ * @param query
+ */
+TMInterface.prototype.findConcordances = function(lang, query) {
+  var self = this;
+  var deferred = Q.defer();
+  self.collection.find({lang: lang, $text: {$search: query}},
+    {
+      lang: 1,
+      segment: 1,
+      score: {$meta: "textScore"}
+    }, function(err, cursor) {
+      if (err) deferred.reject(err);
+      cursor.toArray(
+        function (err, items) {
+          if (err) deferred.reject(err);
+          deferred.resolve(items);
+        }
+      );
+    }
+  );
   return deferred.promise;
 }
 

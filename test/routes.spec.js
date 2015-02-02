@@ -23,6 +23,9 @@ describe('route tests', function () {
     }
   });
 
+  // TODO: the tests currently persist the added nodes in the testDB -- these should really be deleted after each test
+  // TODO: these tests can't be automatically rerun by watching changes because of the 'address in use' error
+
   describe('route tests', function () {
 
 // test the graph TM routes with frisbee
@@ -142,6 +145,7 @@ describe('route tests', function () {
         })
         .toss();
     });
+
     // deleting an entry
 
   });

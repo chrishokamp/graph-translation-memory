@@ -433,6 +433,43 @@ describe('Graph DB tests', function () {
     )
   });
 
+  describe('using the graph-tm as a concordancer', function (done) {
+
+    it('should be able to find fuzzy monolingual concordances', function(done) {
+    var newTranslationNodes = [
+      {'lang': 'en', 'segment': 'this is a test.'},
+      {'lang': 'en', 'segment': 'these are tests.'},
+      {'lang': 'en', 'segment': 'is a test?'},
+      // TODO: 'this is a testy.' doesn't match because of the way mongo does fulltext search
+      // TODO: probably has to do with the way that 'testy' gets stemmed
+      //{'lang': 'en', 'segment': 'this is a testy.'},
+    ];
+      tmInterface.addEntries(newTranslationNodes)
+        .then(
+        function (newNodes) {
+          var testNode = newTranslationNodes[0];
+          tmInterface.findConcordances(testNode.lang, testNode.segment)
+            .then(
+            function (res) {
+              expect(res.length).toEqual(3);
+              done();
+            }).fail(
+            function (err) {
+              console.error('test findConcordances');
+              console.error(err.stack);
+              done();
+            }
+          );
+        }).fail(
+        function (err) {
+          console.error(err.stack);
+          done();
+        }
+      )
+    });
+  });
+
+
 });
 
 
