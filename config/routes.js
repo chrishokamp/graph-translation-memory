@@ -65,21 +65,45 @@ module.exports = function(app, tmInterface) {
   app.get('/concordancer', function(req, res) {
     var lang = req.param('lang');
     var query = req.param('query');
-    var fuzzy = req.param('fuzzy');
-    // careful cast to boolean
-    if (fuzzy === 'true') {
-      fuzzy = true;
-    } else {
-      fuzzy = false;
+
+    // sort first by segment length descending, then by score descending
+    var rankMatches = function(origMatches) {
+      // copy because Array.prototype.sort is in-place
+      // note: this is a shallow copy, but that's ok, because we're not modifying the objects in the list
+      var matches = origMatches.slice(0);
+
+
+      // sort by segment length
+      matches.sort(function(a,b) {
+        if (a.segment.length > b.segment.length) {
+          return 1;
+        }
+        if (a.segment.length < b.segment.length) {
+          return -1;
+        }
+        return 0;
+      });
+
+      // sort by score
+      matches.sort(function(a,b) {
+        if (a.score > b.score) {
+          return 1;
+        }
+        if (a.score < b.score) {
+          return -1;
+        }
+        return 0;
+      });
+
+      // switch to decending order
+      matches.reverse();
+      return matches;
     }
 
-    // working - factor out the concordancing from the target translations
-    tmInterface.findTargetTranslations(sourcelang, segment, targetlang, fuzzy)
+    tmInterface.findConcordances(lang, query)
       .then(function(matches) {
-        console.log('route: ');
-        console.log('MATCHES: ');
-        console.log(matches);
-        res.status(200).send(matches);
+        var sortedMatches = rankMatches(matches);
+        res.status(200).send(sortedMatches);
       }, function(err) {
         res.status(500).send(err);
       });
