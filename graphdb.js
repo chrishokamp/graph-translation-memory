@@ -13,12 +13,20 @@ if ('production' == env) {
 
 }
 
+// constructor
 function TMInterface(collection) {
   this.collection= collection;
 }
 
-// given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
 // TODO: almost all of this code is duplicated in TMInterface.prototype.findTargetTranslations
+/**
+ * find all translations (i.e. all nodes which have an incoming edge from the match(es) for the query
+ * given a language and a segment, retrieve the matching segments by $text search, then retrieve their edges
+ * @param qLang
+ * @param qSegment
+ * @param fuzzy
+ * @returns {promise|*|Q.promise}
+ */
 TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
   var self = this;
   if (!fuzzy || typeof(fuzzy) !== 'boolean') {
@@ -79,11 +87,21 @@ TMInterface.prototype.findTranslations = function(qLang, qSegment, fuzzy) {
   return deferred.promise;
 }
 
+/**
+ * find exact or fuzzy matches for a query
+ * @param qLang
+ * @param qSegment
+ * @param targetLang
+ * @param fuzzy
+ * @returns {promise|*|Q.promise}
+ */
 TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetLang, fuzzy) {
   var self = this;
   if (!fuzzy || typeof(fuzzy) !== 'boolean') {
     fuzzy = false;
   }
+  console.log('findTargetTranslations');
+  console.log('fuzzy: ' + fuzzy);
 
   var deferred = Q.defer();
   var translationCallback = function (err, cursor) {
@@ -107,7 +125,7 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
                   var targetLangMatches = matches.filter(function(item) {
                     return item.lang == targetLang;
                   });
-                  itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': targetLangMatches});
+                  itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': targetLangMatches, 'targetLang': targetLang});
                 })
               });
             }

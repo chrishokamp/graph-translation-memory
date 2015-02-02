@@ -7,14 +7,24 @@ var validate = require('isvalid-express');
 module.exports = function(app, tmInterface) {
 
   // parse requests to /tm using params
-  // WORKING - map this to /tm/:sourcelang/:targetlang using the swagger syntax
+  // WORKING - add fuzzy and exact params
   app.get('/tm', function(req, res) {
     var sourcelang = req.param('sourcelang');
     var targetlang = req.param('targetlang');
     var segment = req.param('segment');
+    var fuzzy = req.param('fuzzy');
+    // careful cast to boolean
+    if (fuzzy === 'true') {
+      fuzzy = true;
+    } else {
+      fuzzy = false;
+    }
 
-    tmInterface.findTargetTranslations(sourcelang, segment, targetlang)
+    tmInterface.findTargetTranslations(sourcelang, segment, targetlang, fuzzy)
       .then(function(matches) {
+        console.log('route: ');
+        console.log('MATCHES: ');
+        console.log(matches);
         res.status(200).send(matches);
       }, function(err) {
         res.status(500).send(err);
@@ -38,8 +48,6 @@ module.exports = function(app, tmInterface) {
     // If body could not be validated, an error was sent to the express error handler.
 
     var nodes = req.body.nodes;
-    console.log('Nodes:');
-    console.log(nodes);
     tmInterface.addEntries(nodes)
     .then(function(newNodes) {
       res.status(200).send(newNodes);

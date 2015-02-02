@@ -1,5 +1,4 @@
 // adding an entry
-// working - switch to jasmine
 describe('route tests', function () {
 
 
@@ -28,7 +27,6 @@ describe('route tests', function () {
 
 // test the graph TM routes with frisbee
     it('should be able to add a single node', function() {
-      console.log('TEST');
 
       frisby.create('test adding several nodes and links to the TM')
         .post('http://localhost:8899/tm', {
@@ -71,11 +69,12 @@ describe('route tests', function () {
 
     });
 
-    it('should be able to retrieve the translations for a node', function() {
+    it('should be able to retrieve the exact-match translations for a node', function() {
       frisby.create('test adding several nodes and links to the TM')
         .post('http://localhost:8899/tm', {
           nodes: [
             {'lang': 'en', 'segment': 'this is a test.'},
+            {'lang': 'en', 'segment': 'this sentence is a test.'},
             {'lang': 'de', 'segment': 'Dies ist ein Test.'},
             {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
             {'lang': 'de', 'segment': 'Dies it.'},
@@ -85,12 +84,20 @@ describe('route tests', function () {
         .expectStatus(200)
         .expectHeaderContains('content-type', 'application/json')
         .after(function(err, res, body) {
-          frisby.create('retrieve the translations for a node')
-            .get('http://localhost:8899/tm?sourcelang=en&targetlang=de&segment=this is a test')
+          frisby.create('retrieve the exact translations for a node')
+            .get('http://localhost:8899/tm?sourcelang=en&targetlang=de&segment=this is a test&fuzzy=false')
+            .expectJSONLength(1)
             .expectJSONTypes('?', {
               sourceLang: String,
+              targetLang: String,
               sourceSegment: String,
               translations: Array
+            })
+            .expectJSON('?', {
+              sourceLang: 'en',
+              targetLang: 'de',
+              sourceSegment: 'this is a test.',
+              translations: function(val) {expect(val.length).toEqual(3)}
             })
             .expectStatus(200)
             .toss()
@@ -98,7 +105,44 @@ describe('route tests', function () {
         .toss();
     });
 
-// deleting an entry
+    it('should be able to return fuzzy matches', function() {
+      frisby.create('test returning exact or fuzzy matches')
+        .post('http://localhost:8899/tm', {
+          nodes: [
+            {'lang': 'en', 'segment': 'this is a test.'},
+            {'lang': 'en', 'segment': 'this a test.'},
+            {'lang': 'en', 'segment': 'this sentence is a test.'},
+            {'lang': 'de', 'segment': 'Dies ist ein Test.'},
+            {'lang': 'de', 'segment': 'Dies ist ein Test TEST.'},
+            {'lang': 'de', 'segment': 'Dies it.'},
+            {'lang': 'tr', 'segment': 'bu bir deneme.'}
+          ]
+        })
+        .expectStatus(200)
+        .expectHeaderContains('content-type', 'application/json')
+        .after(function(err, res, body) {
+          frisby.create('retrieve the fuzzy translations for a node')
+            .get('http://localhost:8899/tm?sourcelang=en&targetlang=de&segment=this is a test&fuzzy=true')
+            .expectJSONLength(3)
+            .expectJSONTypes('?', {
+              sourceLang: String,
+              targetLang: String,
+              sourceSegment: String,
+              translations: Array
+            })
+            .expectJSON('?', {
+              sourceLang: 'en',
+              targetLang: 'de',
+              sourceSegment: 'this is a test.',
+              // add translations param
+              translations: function(val) { expect(val.length).toEqual(3) }
+            })
+            .expectStatus(200)
+            .toss()
+        })
+        .toss();
+    });
+    // deleting an entry
 
   });
 });
