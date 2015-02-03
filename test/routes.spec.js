@@ -162,7 +162,7 @@ describe('route tests', function () {
         .expectStatus(200)
         .expectHeaderContains('content-type', 'application/json')
         .after(function(err, res, body) {
-          frisby.create('retrieve the fuzzy translations for a node')
+          frisby.create('retrieve the monolingual concordances for a query')
             .get('http://localhost:8899/concordancer?lang=en&query=this is a test')
             .expectJSONLength(3)
             .expectJSONTypes('?', {
@@ -173,7 +173,13 @@ describe('route tests', function () {
             })
             .expectJSON('?', {
               lang: 'en',
-              segment: 'this a test.'
+              segment: 'this a test.',
+              score: 1
+            })
+            .expectJSON('?', {
+              lang: 'en',
+              segment: 'this is a test.',
+              score: 1
             })
             .expectStatus(200)
             .toss()
