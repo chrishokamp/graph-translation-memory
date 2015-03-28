@@ -123,7 +123,15 @@ TMInterface.prototype.findTargetTranslations = function(qLang, qSegment, targetL
                   var targetLangMatches = matches.filter(function(item) {
                     return item.lang == targetLang;
                   });
-                  itemDeferred.resolve({'sourceLang': item.lang, 'sourceSegment': item.segment, 'translations': targetLangMatches, 'targetLang': targetLang});
+                  var score = item.score ? item.score : 1.0;
+                  itemDeferred.resolve(
+                    {
+                      'sourceLang': item.lang,
+                      'sourceSegment': item.segment,
+                      'translations': targetLangMatches,
+                      'targetLang': targetLang,
+                      'score': score
+                    });
                 })
               });
             }
